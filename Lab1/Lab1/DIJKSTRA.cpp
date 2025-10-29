@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <chrono> 
+#include <random>
 
 #define MIN 0
 #define MAX 9999
@@ -21,13 +22,15 @@ std::vector<edge> test_graph{
     edge(3,4,8), edge(4,5,3), edge(4,0,4),
 };
 
-std::vector<int> LDGDijkstraMark(std::vector<edge> graph, int n, int start_vertex) {
+std::vector<int> LDGDijkstraMark(std::vector<edge> graph, int n, int start_vertex, int& time) {
     std::vector<int> h(n, 0);
     std::vector<int> dist(n, MAX);
 
     dist[start_vertex] = 0;
     int nq = n;
 
+
+    auto start_time = std::chrono::high_resolution_clock::now();
     while (nq > 0) {
         int c = 0;
         while ((c < n) && (h[c] != 0)) {
@@ -62,10 +65,15 @@ std::vector<int> LDGDijkstraMark(std::vector<edge> graph, int n, int start_verte
         }
     }
 
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+
+    time = duration.count();
+
     return dist;
 };
 
-std::vector<int> LDGDijkstra15Heap(std::vector<edge> graph, int n, int start_vertex) {
+std::vector<int> LDGDijkstra15Heap(std::vector<edge> graph, int n, int start_vertex, int& time) {
     int d = 15;
     std::vector<int> dist(n, MAX);
     std::vector<int> name(n);
@@ -83,6 +91,7 @@ std::vector<int> LDGDijkstra15Heap(std::vector<edge> graph, int n, int start_ver
     DHeap<int> heap(d, name, key, heap_index, n);
     heap.buildQueue();
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     while (!heap.isEmpty()) {
         int name1, key1;
         heap.extractMinimum(name1, key1);
@@ -115,68 +124,115 @@ std::vector<int> LDGDijkstra15Heap(std::vector<edge> graph, int n, int start_ver
             }
         }
     }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+
+    time = duration.count();
 
     return dist;
+}
+
+
+std::vector<edge> generateRandomGraph(int n, int m, int min_weight = 1, int max_weight = 20) {
+    std::vector<edge> graph;
+    std::vector<std::pair<int, int>> all_possible_edges;
+
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            all_possible_edges.push_back({ i, j });
+        }
+    }
+    
+
+    int max_possible_edges = all_possible_edges.size();
+    if (m > max_possible_edges) {
+        m = max_possible_edges;
+        std::cout << "Warning: Requested " << m << " edges but maximum possible is " << max_possible_edges
+            << ". Generating " << max_possible_edges << " edges.\n";
+    }
+
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::shuffle(all_possible_edges.begin(), all_possible_edges.end(), g);
+    std::uniform_int_distribution<int> weight_dist(min_weight, max_weight);
+
+
+    for (int i = 0; i < m; i++) {
+        int v1 = all_possible_edges[i].first;
+        int v2 = all_possible_edges[i].second;
+        int weight = weight_dist(g);
+        graph.push_back(edge(v1, v2, weight));
+    }
+
+    return graph;
 }
 
 int main() {
     int n = 6;
     int start_vertex = 0;
     std::vector<int> dist;
+    std::vector<edge> graph;
     int flag = -1;
 
 
-    std::cout << "Start vertex: ";
-    std::cin >> start_vertex;
+    int choice = -1;
+    std::cout << "Choose graph type:\n";
+    std::cout << "1 - Use test graph\n";
+    std::cout << "2 - Generate random graph\n";
+    std::cin >> choice;
 
-    std::cout << "Chose the algorithm" << "\n"
-        << "1 - Mark algorithm:" << "\n" << "2 - 15-Heap algorithm:" << "\n";
-    std::cin >> flag;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-
-    switch (flag)
+    switch (choice)
     {
     case 1:
-        start_time = std::chrono::high_resolution_clock::now();
-        std::cout << "Mark algorithm:" << "\n";
-        dist = LDGDijkstraMark(test_graph, n, start_vertex);
-        end_time = std::chrono::high_resolution_clock::now();
-        duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        for (int i = 0; i < n; i++) {
-            std::cout << "Vertex: " << i << " Dist: = " << dist[i] << "\n";
-        }
-        std::cout << "Execution time: " << duration.count() << " microseconds\n";
+        graph = test_graph;
+        n = 6;        
         break;
     case 2:
-        std::cout << "15-Heap algorithm:" << "\n";
-        start_time = std::chrono::high_resolution_clock::now();
-        dist = LDGDijkstra15Heap(test_graph, n, start_vertex);
-        end_time = std::chrono::high_resolution_clock::now();
-        duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        for (int i = 0; i < n; i++) {
-            std::cout << "Vertex: " << i << " Dist: = " << dist[i] << "\n";
-        }
-        std::cout << "Execution time: " << duration.count() << " microseconds\n";
+        std::cout << "Enter number of vertices: ";
+        std::cin >> n;
+        int m, q, r;
+        std::cout << "Enter number of edges: ";
+        std::cin >> m;
+        std::cout << "Enter min of weight: ";
+        std::cin >> q;
+        std::cout << "Enter max of weight: ";
+        std::cin >> r;
+        graph = generateRandomGraph(n, m, q, r);
         break;
     default:
         std::cout << "Invalid input" << "\n";
         break;
     }
 
-    /*std::cout << "Mark algorithm:" << "\n";
-    std::vector<int> dist_mark = LDGDijkstraMark(test_graph, n, start_vertex);
-    for (int i = 0; i < n; i++) {
-        std::cout << "Vertex: " << i << " Dist: = " << dist_mark[i] << "\n";
-    }
 
-    std::cout << "15-Heap algorithm:" << "\n";
-    std::vector<int> dist_heap = LDGDijkstra15Heap(test_graph, n, start_vertex);
+    std::cout << "Start vertex: ";
+    std::cin >> start_vertex;
+
+   
+
+    int time = 0;   
+    std::cout << "Mark algorithm:" << "\n";
+    dist = LDGDijkstraMark(graph, n, start_vertex, time);        
     for (int i = 0; i < n; i++) {
-        std::cout << "Vertex: " << i << " Dist: = " << dist_heap[i] << "\n";
-    }*/
+        std::cout << "Vertex: " << i << " Dist: = " << dist[i] << "\n";
+    }
+    std::cout << "Execution time: " << time << " microseconds\n";
+
+    time = 0;
+    std::cout << "15-Heap algorithm:" << "\n";
+    dist = LDGDijkstra15Heap(graph, n, start_vertex, time);
+
+    for (int i = 0; i < n; i++) {
+        std::cout << "Vertex: " << i << " Dist: = " << dist[i] << "\n";
+    }
+    std::cout << "Execution time: " << time << " microseconds\n";
+
+
+    
 
     return 0;
 }
